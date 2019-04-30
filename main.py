@@ -3,6 +3,7 @@ import re
 import string
 
 import spacy
+from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
 
 # a contain b, 1表示正序，0表示反序
@@ -63,10 +64,7 @@ class Probase:
             n_super_concept_sub_concept_new = {}
             n_super_concept_new = {}
             knowledge_base_size_new = 1
-            sentence_num = 0
-            for sent in self.get_sentence():
-                sentence_num += 1
-                print("*" * 15 + str(sentence_num) + "*" * 15)
+            for sent in tqdm(self.get_sentence()):
                 x, y = self.syntactic_extraction(sent)
                 if not x:
                     continue
