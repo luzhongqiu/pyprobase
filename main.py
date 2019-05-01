@@ -52,7 +52,6 @@ class Probase:
                 x, y = self.syntactic_extraction(sent)
                 print("x: ", x)
                 print("y: ", y)
-                continue
                 if not x:
                     continue
                 if len(x) > 1:
@@ -67,7 +66,7 @@ class Probase:
                 print("detect y: ", y)
                 for sub_concept in y:
                     self.increase_count(n_super_concept_sub_concept_new,
-                                        (most_likely_super_concept.chunk, sub_concept))
+                                        (most_likely_super_concept.chunk, sub_concept.chunk))
                     self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
                     knowledge_base_size_new += 1
 
@@ -179,7 +178,7 @@ class Probase:
         for k, v in hyponyms:
             x.add(v)
             y.append(k)
-        return x, y
+        return list(x), y
 
 
 probase = Probase('data/input.txt')
