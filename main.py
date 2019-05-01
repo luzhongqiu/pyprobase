@@ -37,8 +37,6 @@ class Probase:
             knowledge_base_size_new = 1
             for sent in tqdm(self.get_sentence()):
                 x, y = self.syntactic_extraction(sent)
-                print("x: ", x)
-                print("y: ", y)
                 if not x:
                     continue
                 if len(x) > 1:
