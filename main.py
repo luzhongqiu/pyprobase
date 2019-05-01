@@ -155,6 +155,8 @@ class Probase:
             for line in f:
                 data = line.rstrip('\n').split('\n')
                 for d in data:
+                    if not d:
+                        continue
                     for sent in sent_tokenize(d):
                         yield sent
 
