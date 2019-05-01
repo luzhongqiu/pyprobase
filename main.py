@@ -37,6 +37,8 @@ class Probase:
             knowledge_base_size_new = 1
             for sent in tqdm(self.get_sentence()):
                 x, y = self.syntactic_extraction(sent)
+                print(x)
+                print(y)
                 if not x:
                     continue
                 if len(x) > 1:
@@ -45,7 +47,6 @@ class Probase:
                         continue
                 else:
                     most_likely_super_concept = x[0]
-
                 y = self.sub_concept_detection(most_likely_super_concept, y)
                 print("most_likely_super_concept: ", most_likely_super_concept)
                 print("detect y: ", y)
@@ -152,13 +153,14 @@ class Probase:
         """分句子"""
         with open(self.corpus_path, encoding='utf8') as f:
             for line in f:
-                for sent in sent_tokenize(line.rstrip('\n')):
-                    yield sent
+                data = line.rstrip('\n').split('\n')
+                for d in data:
+                    for sent in sent_tokenize(d):
+                        yield sent
 
     def syntactic_extraction(self, sent: str) -> (list, list):
         """句子抽取x, y.  x可以无序， y必须有序，为了后面判断离match phrase最近"""
         x, y = set(), []
-
         hyponyms = self.hp.find_hyponyms(sent)
         for k, v in hyponyms:
             x.add(v)

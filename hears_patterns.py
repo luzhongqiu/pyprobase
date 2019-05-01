@@ -105,14 +105,13 @@ class HearstPatterns(object):
         np_tagged_sentences, chunks_index = self.chunk(rawtext)
         for sentence in np_tagged_sentences:
             # two or more NPs next to each other should be merged into a single NP, it's a chunk error
-
             for (hearst_pattern, parser) in self.__hearst_patterns:
+                print('hearst_pattern: ', hearst_pattern)
+                print('sentence: ', sentence)
                 matches = hearst_pattern.search(sentence)
                 if matches:
                     match_str = matches.group(0)
-
                     nps = [a for a in match_str.split() if a.startswith("NP_")]
-
                     if parser == "first":
                         general = nps[0]
                         specifics = nps[1:]
@@ -125,7 +124,6 @@ class HearstPatterns(object):
                             hyponyms.append((self.clean_hyponym_term(specifics[i]), chunks_index[general]))
                         except:
                             pass
-
         return hyponyms
 
     def clean_hyponym_term(self, term):
