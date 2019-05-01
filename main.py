@@ -222,10 +222,10 @@ class Probase:
 
     def extract_noun_chunk(self, doc):
         """spacy自带noun chunks + 我们自己规则抽取noun chunks， 避免 other contries"""
-        chunk = set([Chunk(chunk=_.text.lower(), chunk_root=_.root.text.lower()) for _ in doc.noun_chunks])
-        chunk2 = set("".join([token.text if token.pos_ in ['NOUN', 'PROPN'] else "##" for token in doc]).split("##"))
-        chunk2 = chunk2.difference(set([""]))
-        chunk.update([Chunk(chunk=_, chunk_root=_) for _ in chunk2])
+        chunk = [Chunk(chunk=_.text.lower(), chunk_root=_.root.text.lower()) for _ in doc.noun_chunks]
+        # chunk2 = set("".join([token.text if token.pos_ in ['NOUN', 'PROPN'] else "##" for token in doc]).split("##"))
+        # chunk2 = chunk2.difference(set([""]))
+        # chunk.update([Chunk(chunk=_, chunk_root=_) for _ in chunk2])
         return chunk
 
 
