@@ -1,18 +1,22 @@
 # -*- encoding: utf-8 -*-
-import re
-import string
 
 import spacy
-from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
+from tqdm import tqdm
+
+from hears_patterns import HearstPatterns
 
 # a contain b, 1表示正序，0表示反序
+# rules = [
+#     (r'(?P<A>.*) such as (?P<B>.*)', 1),
+#     (r'(.*) such (?P<A>.*?) as (?P<B>.*)', 1),
+#     (r'(?P<A>.*) including (?P<B>.*)', 1),
+#     (r'(?P<B>.*) (and|or) other (?P<A>.*)', 0),
+#     (r'(?P<A>.*) especially (?P<B>.*)', 1)
+# ]
+
 rules = [
-    (r'(?P<A>.*) such as (?P<B>.*)', 1),
-    (r'(.*) such (?P<A>.*?) as (?P<B>.*)', 1),
-    (r'(?P<A>.*) including (?P<B>.*)', 1),
-    (r'(?P<B>.*) (and|or) other (?P<A>.*)', 0),
-    (r'(?P<A>.*) especially (?P<B>.*)', 1)
+    (r'NP such as (NP,|NP ,)* (or|and) NP', 1)
 ]
 
 """
@@ -22,37 +26,17 @@ note
 """
 
 
-class Chunk:
-    """chunk存储"""
-
-    def __init__(self, chunk, chunk_root):
-        self.chunk = chunk
-        self.chunk_root = chunk_root
-
-    def __eq__(self, other):
-        return self.chunk == other.chunk and self.chunk_root == other.chunk_root
-
-    def __hash__(self):
-        return hash((self.chunk, self.chunk_root))
-
-    def __str__(self):
-        return "<[text]: " + self.chunk + ' [root]: ' + self.chunk_root + '>'
-
-    def __repr__(self):
-        return self.__str__()
-
-
 class Probase:
     def __init__(self, corpus_path):
         self.nlp = spacy.load('en')
         self.corpus_path = corpus_path
-        self.rule_compiles = self.init_rules()
         self.n_super_concept = {}
         self.n_super_concept_sub_concept = {}
         self.knowledge_base_size = 1
         self.epsilon = 0.001
         self.threshold_super_concept = 1.1
         self.threshold_k = 0.01
+        self.hp = HearstPatterns(extended=True)
 
     def run(self):
         """主程序"""
@@ -66,6 +50,9 @@ class Probase:
             knowledge_base_size_new = 1
             for sent in tqdm(self.get_sentence()):
                 x, y = self.syntactic_extraction(sent)
+                print("x: ", x)
+                print("y: ", y)
+                continue
                 if not x:
                     continue
                 if len(x) > 1:
@@ -187,46 +174,12 @@ class Probase:
     def syntactic_extraction(self, sent: str) -> (list, list):
         """句子抽取x, y.  x可以无序， y必须有序，为了后面判断离match phrase最近"""
         x, y = set(), []
-        doc = None
-        for rule_compile, is_forward in self.rule_compiles:
-            groups = rule_compile.match(sent)
 
-            if groups:
-                doc = doc if doc else self.nlp(sent)
-                noun_chunks = self.extract_noun_chunk(doc)
-                for chunk in noun_chunks:
-                    if chunk.chunk in groups.group('A'):
-                        x.add(chunk)
-                if x:
-                    sub_conception = groups.group('B')
-                    sub_conception_list = [_.strip() for _ in sub_conception.strip(',').split(',') if _.strip()]
-                    if not is_forward:
-                        sub_conception_list = list(reversed(sub_conception_list))
-                    last_item = sub_conception_list[-1]
-                    for delimiter in ['and', 'or']:
-                        sub_conception_list += last_item.split(delimiter)
-                    sub_conception_list = [_.strip() for _ in sub_conception_list if _.strip()]
-                    # 清理符号
-                    sub_conception_list = [_.translate(
-                        str.maketrans("", "", string.punctuation)) for _ in sub_conception_list]
-                    try:
-                        sub_conception_list.remove("")
-                    except:
-                        pass
-                    y = sub_conception_list
-        return list(x), y
-
-    def init_rules(self):
-        """初始化编译正则"""
-        return [(re.compile(i), j) for i, j in rules]
-
-    def extract_noun_chunk(self, doc):
-        """spacy自带noun chunks + 我们自己规则抽取noun chunks， 避免 other contries"""
-        chunk = [Chunk(chunk=_.text.lower(), chunk_root=_.root.text.lower()) for _ in doc.noun_chunks]
-        # chunk2 = set("".join([token.text if token.pos_ in ['NOUN', 'PROPN'] else "##" for token in doc]).split("##"))
-        # chunk2 = chunk2.difference(set([""]))
-        # chunk.update([Chunk(chunk=_, chunk_root=_) for _ in chunk2])
-        return chunk
+        hyponyms = self.hp.find_hyponyms(sent)
+        for k, v in hyponyms:
+            x.add(v)
+            y.append(k)
+        return x, y
 
 
 probase = Probase('data/input.txt')

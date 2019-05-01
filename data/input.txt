@@ -1,3 +1,1 @@
-Our mental world contains many concepts about worldly facts, and the Microsoft Concept Graph tries to duplicate them. It is a big graph of concepts, which is harnessed from billions of web pages and years' worth of search logs.
-There are some mammal animals other than dogs such as cat.
-It representatives in North America, Europe, the Middle East, Australia, Mexico, Brazil, Japan, China and other countries
+There are some mammal animals such as cat, dog and bee.
