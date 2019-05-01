@@ -69,6 +69,7 @@ class HearstPatterns(object):
                 ('((NP_\\w+ ?(, )?)+(and |or )?sort of NP_\\w+)', 'last')
             ])
 
+        self.__hearst_patterns = [(re.compile(k), v) for k, v in self.__hearst_patterns]
         self.__spacy_nlp = spacy.load('en')
 
     def chunk(self, rawtext):
@@ -106,7 +107,7 @@ class HearstPatterns(object):
             # two or more NPs next to each other should be merged into a single NP, it's a chunk error
 
             for (hearst_pattern, parser) in self.__hearst_patterns:
-                matches = re.search(hearst_pattern, sentence)
+                matches = hearst_pattern.search(sentence)
                 if matches:
                     match_str = matches.group(0)
 
