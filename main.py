@@ -6,19 +6,6 @@ from tqdm import tqdm
 
 from hears_patterns import HearstPatterns
 
-# a contain b, 1表示正序，0表示反序
-# rules = [
-#     (r'(?P<A>.*) such as (?P<B>.*)', 1),
-#     (r'(.*) such (?P<A>.*?) as (?P<B>.*)', 1),
-#     (r'(?P<A>.*) including (?P<B>.*)', 1),
-#     (r'(?P<B>.*) (and|or) other (?P<A>.*)', 0),
-#     (r'(?P<A>.*) especially (?P<B>.*)', 1)
-# ]
-
-rules = [
-    (r'NP such as (NP,|NP ,)* (or|and) NP', 1)
-]
-
 """
 note
 1 上位词用np匹配

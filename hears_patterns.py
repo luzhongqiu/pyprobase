@@ -86,7 +86,7 @@ class HearstPatterns(object):
                     chunk_arr.append(token.lemma_)
                 chunk_lemma = " ".join(chunk_arr)
                 replacement_value = "NP_" + "_".join(chunk_arr)
-                chunks_index[chunk_lemma] = Chunk(chunk=chunk_lemma, chunk_root=chunk.root.lemma_)
+                chunks_index[replacement_value] = Chunk(chunk=chunk_lemma, chunk_root=chunk.root.lemma_)
                 sentence_text = sentence_text.replace(chunk_lemma, replacement_value)
             chunks.append(sentence_text)
         return chunks, chunks_index
@@ -120,7 +120,7 @@ class HearstPatterns(object):
                         specifics = nps[:-1]
 
                     for i in range(len(specifics)):
-                        hyponyms.append((chunks_index[self.clean_hyponym_term(specifics[i])], chunks_index[self.clean_hyponym_term(general)]))
+                        hyponyms.append((chunks_index[specifics[i]], chunks_index[general]))
 
         return hyponyms
 
