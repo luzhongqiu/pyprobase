@@ -53,7 +53,7 @@ class Probase:
                 print("detect y: ", y)
                 for sub_concept in y:
                     self.increase_count(n_super_concept_sub_concept_new,
-                                        (most_likely_super_concept.chunk, sub_concept.chunk))
+                                        (most_likely_super_concept.chunk, sub_concept))
                     self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
                     knowledge_base_size_new += 1
 

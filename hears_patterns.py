@@ -120,7 +120,7 @@ class HearstPatterns(object):
                         specifics = nps[:-1]
 
                     for i in range(len(specifics)):
-                        hyponyms.append((chunks_index[specifics[i]], chunks_index[general]))
+                        hyponyms.append((self.clean_hyponym_term(specifics[i]), chunks_index[general]))
 
         return hyponyms
 
