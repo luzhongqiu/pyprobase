@@ -21,8 +21,8 @@ class Probase:
         self.n_super_concept_sub_concept = {}
         self.knowledge_base_size = 1
         self.epsilon = 0.001
-        self.threshold_super_concept = 1.1
-        self.threshold_k = 0.01
+        self.threshold_super_concept = 1.2
+        self.threshold_k = 0.02
         self.hp = HearstPatterns(extended=True)
 
     def run(self):
