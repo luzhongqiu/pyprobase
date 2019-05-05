@@ -92,7 +92,7 @@ class HearstPatterns(object):
                 if not chunk_lemma.strip():
                     continue
                 replacement_value = "NP_" + "_".join(chunk_arr)
-                chunks_index[replacement_value] = Chunk(chunk=chunk_lemma, chunk_root=chunk.root.lemma_)
+                chunks_index[replacement_value] = Chunk(chunk=chunk_lemma.lower(), chunk_root=chunk.root.lemma_.lower())
                 sentence_text = sentence_text.replace(chunk_lemma, replacement_value, 1)
             chunks.append(sentence_text)
         return chunks, chunks_index
@@ -131,4 +131,4 @@ class HearstPatterns(object):
 
     def clean_hyponym_term(self, term):
         # good point to do the stemming or lemmatization
-        return term.replace("NP_", "").replace("_", " ")
+        return term.replace("NP_", "").replace("_", " ").lower()
