@@ -4,7 +4,6 @@ import pickle
 import time
 from multiprocessing import Queue, Process
 
-import spacy
 from nltk.tokenize import sent_tokenize
 from tqdm import tqdm
 
@@ -17,112 +16,74 @@ note
 """
 
 
-class Probase:
-    def __init__(self, corpus_path):
-        self.nlp = spacy.load('en')
+class Master:
+    def __init__(self, q_output, corpus_path):
+        self.q_output = q_output
         self.corpus_path = corpus_path
+
+    def __call__(self, *args, **kwargs):
+        iter_num = 0
+        while 1:
+            iter_num += 1
+            for sent in tqdm(self.get_sentence(), desc="interator {}".format(iter_num)):
+                if not sent.strip():
+                    continue
+                self.q_output.put((iter_num, sent))
+
+    def get_sentence(self) -> list:
+        """分句子"""
+        with open(self.corpus_path, encoding='utf8') as f:
+            for line in f:
+                data = line.rstrip('\n').split('\n')
+                for d in data:
+                    if not d:
+                        continue
+                    for sent in sent_tokenize(d):
+                        yield sent
+
+
+class Worker:
+    def __init__(self, q_input, q_output):
+        self.q_input = q_input
+        self.q_output = q_output
+        self.hp = HearstPatterns(extended=True)
+
+    def __call__(self, *args, **kwargs):
+        while 1:
+            iter_num, sent = self.q_input.get()
+            x, y = self.syntactic_extraction(sent)
+            self.q_output.put((iter_num, x, y))
+
+    def syntactic_extraction(self, sent: str) -> (list, list):
+        """句子抽取x, y.  x可以无序， y必须有序，为了后面判断离match phrase最近"""
+        x, y = set(), []
+        hyponyms = self.hp.find_hyponyms(sent)
+        for k, v in hyponyms:
+            x.add(v)
+            y.append(k)
+        return list(x), y
+
+
+class Calculate:
+    def __init__(self, q_input):
+        self.q_input = q_input
         self.n_super_concept = {}
         self.n_super_concept_sub_concept = {}
         self.knowledge_base_size = 1
         self.epsilon = 0.001
         self.threshold_super_concept = 1.2
         self.threshold_k = 0.02
-        self.hp = HearstPatterns(extended=True)
         self.save_dir = 'data'
         self.break_point_name = 'save_point.pkl'
         self.output_name = 'output.txt'
-        self.worker_num = 15
-
-    def worker(self, q_input: Queue, q_output: Queue):
-        while 1:
-            iter_num, sent = q_input.get()
-            x, y = self.syntactic_extraction(sent)
-            q_output.put((iter_num, x, y))
-
-    def caculate(self, q_input: Queue):
-        origin_iter_num = 1
-        n_super_concept_sub_concept_new = {}
-        n_super_concept_new = {}
-        knowledge_base_size_new = 1
-        save_time = time.time()
-        while 1:
-            iter_num, x, y = q_input.get()
-            if not x:
-                continue
-
-            if iter_num != origin_iter_num:
-                """新一轮迭代"""
-                size_old = len(self.n_super_concept_sub_concept)
-                size_new = len(n_super_concept_sub_concept_new)
-                if size_new == size_old:
-                    break
-                else:
-                    self.n_super_concept_sub_concept = n_super_concept_sub_concept_new
-                    self.n_super_concept = n_super_concept_new
-                    self.knowledge_base_size = knowledge_base_size_new
-                    n_super_concept_sub_concept_new = {}
-                    n_super_concept_new = {}
-                    knowledge_base_size_new = 1
-
-            # print("=" * 30)
-            # print('x: ', x)
-            # print('y: ', y)
-            if len(x) > 1:
-                most_likely_super_concept = self.super_concept_detection(x, y)
-                if not most_likely_super_concept:
-                    continue
-            else:
-                most_likely_super_concept = x[0]
-            y = self.sub_concept_detection(most_likely_super_concept, y)
-            for sub_concept in y:
-                self.increase_count(n_super_concept_sub_concept_new,
-                                    (most_likely_super_concept.chunk, sub_concept))
-                self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
-                knowledge_base_size_new += 1
-            # print("most_likely_super_concept: ", most_likely_super_concept)
-            # print("detect y: ", y)
-            # print("old size: ", size_old)
-            # print("new size: ", size_new)
-            # print("=" * 30)
-            if time.time() - save_time > 2 * 60:
-                self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
-                save_time = time.time()
-        self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
-        sys.exit()
-
-    def master(self, q_output: Queue):
-        iter_num = 0
         self.load()
-        while 1:
-            iter_num += 1
-            for sent in tqdm(self.get_sentence(), desc="interator {}".format(iter_num)):
-                if not sent.strip():
-                    continue
-                q_output.put((iter_num, sent))
 
-    def save_file(self, iter_num=None, n_super_concept=None, n_super_concept_sub_concept=None):
-        """Saves probase as filename in text format"""
-        if not n_super_concept:
-            n_super_concept = self.n_super_concept
-        if not n_super_concept_sub_concept:
-            n_super_concept_sub_concept = self.n_super_concept_sub_concept
-
-        filename = os.path.join(self.save_dir, self.output_name)
-        if iter_num:
-            filename += "_iter_{}".format(iter_num)
-        with open(filename, 'w') as file:
-            for key, value in n_super_concept_sub_concept.items():
-                file.write(key[0] + '##' + key[1] + '##' + str(value) + '\n')
-        with open(os.path.join(self.save_dir, self.break_point_name), 'wb') as f:
-            pickle.dump((n_super_concept, n_super_concept_sub_concept), f)
-
-    @staticmethod
-    def increase_count(dictionary, key):
-        """Increases count of key in dictionary"""
-        if key in dictionary:
-            dictionary[key] += 1
-        else:
-            dictionary[key] = 1
+    def load(self):
+        save_point_path = os.path.join(self.save_dir, self.break_point_name)
+        if os.path.exists(save_point_path):
+            print('loading break point ...')
+            with open(save_point_path, 'rb') as f:
+                self.n_super_concept, self.n_super_concept_sub_concept = pickle.load(f)
 
     def p_x(self, super_concept):
         """计算P(x)"""
@@ -152,14 +113,6 @@ class Probase:
         else:
             return probability
 
-    def sub_concept_detection(self, super_concept, sub_concepts):
-        scores = [self.p_y_x(_, super_concept) for _ in sub_concepts]
-        max_score = max(scores)
-        if max_score < self.threshold_k:
-            return sub_concepts[:1]
-
-        return sub_concepts[:scores.index(max_score) + 1]
-
     def super_concept_detection(self, super_concepts: list, sub_concepts: list):
         likelihoods = {}
         for super_concept in super_concepts:
@@ -185,45 +138,92 @@ class Probase:
             return sorted_likelihoods[0][0]
         else:
             return None
-        pass
 
-    def get_sentence(self) -> list:
-        """分句子"""
-        with open(self.corpus_path, encoding='utf8') as f:
-            for line in f:
-                data = line.rstrip('\n').split('\n')
-                for d in data:
-                    if not d:
-                        continue
-                    for sent in sent_tokenize(d):
-                        yield sent
+    def sub_concept_detection(self, super_concept, sub_concepts):
+        scores = [self.p_y_x(_, super_concept) for _ in sub_concepts]
+        max_score = max(scores)
+        if max_score < self.threshold_k:
+            return sub_concepts[:1]
 
-    def syntactic_extraction(self, sent: str) -> (list, list):
-        """句子抽取x, y.  x可以无序， y必须有序，为了后面判断离match phrase最近"""
-        x, y = set(), []
-        hyponyms = self.hp.find_hyponyms(sent)
-        for k, v in hyponyms:
-            x.add(v)
-            y.append(k)
-        return list(x), y
+        return sub_concepts[:scores.index(max_score) + 1]
 
-    def load(self):
-        save_point_path = os.path.join(self.save_dir, self.break_point_name)
-        if os.path.exists(save_point_path):
-            print('loading break point ...')
-            with open(save_point_path, 'rb') as f:
-                self.n_super_concept, self.n_super_concept_sub_concept = pickle.load(f)
+    @staticmethod
+    def increase_count(dictionary, key):
+        """Increases count of key in dictionary"""
+        if key in dictionary:
+            dictionary[key] += 1
+        else:
+            dictionary[key] = 1
+
+    def save_file(self, iter_num=None, n_super_concept=None, n_super_concept_sub_concept=None):
+        """Saves probase as filename in text format"""
+        if not n_super_concept:
+            n_super_concept = self.n_super_concept
+        if not n_super_concept_sub_concept:
+            n_super_concept_sub_concept = self.n_super_concept_sub_concept
+
+        filename = os.path.join(self.save_dir, self.output_name)
+        if iter_num:
+            filename += "_iter_{}".format(iter_num)
+        with open(filename, 'w') as file:
+            for key, value in n_super_concept_sub_concept.items():
+                file.write(key[0] + '##' + key[1] + '##' + str(value) + '\n')
+        with open(os.path.join(self.save_dir, self.break_point_name), 'wb') as f:
+            pickle.dump((n_super_concept, n_super_concept_sub_concept), f)
+
+    def __call__(self, *args, **kwargs):
+        origin_iter_num = 1
+        n_super_concept_sub_concept_new = {}
+        n_super_concept_new = {}
+        knowledge_base_size_new = 1
+        save_time = time.time()
+        while 1:
+            iter_num, x, y = self.q_input.get()
+            if not x:
+                continue
+
+            if iter_num != origin_iter_num:
+                """新一轮迭代"""
+                size_old = len(self.n_super_concept_sub_concept)
+                size_new = len(n_super_concept_sub_concept_new)
+                if size_new == size_old:
+                    break
+                else:
+                    self.n_super_concept_sub_concept = n_super_concept_sub_concept_new
+                    self.n_super_concept = n_super_concept_new
+                    self.knowledge_base_size = knowledge_base_size_new
+                    n_super_concept_sub_concept_new = {}
+                    n_super_concept_new = {}
+                    knowledge_base_size_new = 1
+
+            if len(x) > 1:
+                most_likely_super_concept = self.super_concept_detection(x, y)
+                if not most_likely_super_concept:
+                    continue
+            else:
+                most_likely_super_concept = x[0]
+            y = self.sub_concept_detection(most_likely_super_concept, y)
+            for sub_concept in y:
+                self.increase_count(n_super_concept_sub_concept_new,
+                                    (most_likely_super_concept.chunk, sub_concept))
+                self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
+                knowledge_base_size_new += 1
+            if time.time() - save_time > 2 * 60:
+                self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
+                save_time = time.time()
+        self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
+        sys.exit()
 
 
 import sys
 
-probase = Probase(sys.argv[1])
 q_m2w = Queue(maxsize=3000)
 q_w2c = Queue(maxsize=3000)
+worker_num = 15
 ps = []
-ps.append(Process(target=probase.master, args=(q_m2w,)))
-ps += [Process(target=probase.worker, args=(q_m2w, q_w2c)) for _ in range(probase.worker_num)]
-ps.append(Process(target=probase.caculate, args=(q_w2c,)))
+ps.append(Process(target=Master(q_m2w, sys.argv[1])))
+ps += [Process(target=Worker(q_m2w, q_w2c)) for _ in range(worker_num)]
+ps.append(Process(target=Calculate(q_w2c)))
 
 for p in ps:
     p.start()
