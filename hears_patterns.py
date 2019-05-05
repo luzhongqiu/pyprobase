@@ -71,10 +71,10 @@ class HearstPatterns(object):
             ])
 
         self.__hearst_patterns = [(re.compile(k), v) for k, v in self.__hearst_patterns]
-        self.__spacy_nlp = spacy.load('en')
+        self.__spacy_nlp = spacy.load('en', disable=['ner', 'textcat'])
 
     def chunk(self, rawtext):
-        doc = self.__spacy_nlp(rawtext, disable=['ner', 'textcat'])
+        doc = self.__spacy_nlp(rawtext)
         chunks = []
         chunks_index = {}
         for sentence in doc.sents:
