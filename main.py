@@ -207,6 +207,3 @@ import sys
 probase = Probase(sys.argv[1])
 probase.run()
 
-
-x:  [<[text]: a politicized initiative [root]: initiative>]
-y:  ['the YIISA']
