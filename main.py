@@ -2,6 +2,7 @@
 import os
 import pickle
 import time
+from multiprocessing import Queue, Process
 
 import spacy
 from nltk.tokenize import sent_tokenize
@@ -30,64 +31,74 @@ class Probase:
         self.save_dir = 'data'
         self.break_point_name = 'save_point.pkl'
         self.output_name = 'output.txt'
+        self.worker_num = 15
 
-    def run(self):
-        """主程序"""
-        self.load()
-        iter_num = 0
+    def worker(self, q_input: Queue, q_output: Queue):
+        while 1:
+            iter_num, sent = q_input.get()
+            x, y = self.syntactic_extraction(sent)
+            q_output.put((iter_num, x, y))
+
+    def caculate(self, q_input: Queue):
+        origin_iter_num = 1
+        n_super_concept_sub_concept_new = {}
+        n_super_concept_new = {}
+        knowledge_base_size_new = 1
         save_time = time.time()
         while 1:
-            iter_num += 1
-            print()
-            print("Interator {}".format(iter_num))
-            n_super_concept_sub_concept_new = {}
-            n_super_concept_new = {}
-            knowledge_base_size_new = 1
-            for sent in tqdm(self.get_sentence()):
-                if not sent.strip():
-                    continue
-                x, y = self.syntactic_extraction(sent)
-                if not x:
-                    continue
-                print("=" * 30)
-                print('x: ', x)
-                print('y: ', y)
-                if len(x) > 1:
-                    most_likely_super_concept = self.super_concept_detection(x, y)
-                    if not most_likely_super_concept:
-                        continue
-                else:
-                    most_likely_super_concept = x[0]
-                y = self.sub_concept_detection(most_likely_super_concept, y)
-                for sub_concept in y:
-                    self.increase_count(n_super_concept_sub_concept_new,
-                                        (most_likely_super_concept.chunk, sub_concept))
-                    self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
-                    knowledge_base_size_new += 1
+            iter_num, x, y = q_input.get()
+            if not x:
+                continue
+
+            if iter_num != origin_iter_num:
+                """新一轮迭代"""
                 size_old = len(self.n_super_concept_sub_concept)
                 size_new = len(n_super_concept_sub_concept_new)
-                print("most_likely_super_concept: ", most_likely_super_concept)
-                print("detect y: ", y)
-                print("old size: ", size_old)
-                print("new size: ", size_new)
-                print("=" * 30)
-                if time.time() - save_time > 5 * 60:
-                    self.save_file(n_super_concept_new, n_super_concept_sub_concept_new)
-                    save_time = time.time()
+                if size_new == size_old:
+                    break
+                else:
+                    self.n_super_concept_sub_concept = n_super_concept_sub_concept_new
+                    self.n_super_concept = n_super_concept_new
+                    self.knowledge_base_size = knowledge_base_size_new
+                    n_super_concept_sub_concept_new = {}
+                    n_super_concept_new = {}
+                    knowledge_base_size_new = 1
 
-            size_old = len(self.n_super_concept_sub_concept)
-            size_new = len(n_super_concept_sub_concept_new)
-            print("old size: ", size_old)
-            print("new size: ", size_new)
-            if size_new == size_old:
-                break
+            # print("=" * 30)
+            # print('x: ', x)
+            # print('y: ', y)
+            if len(x) > 1:
+                most_likely_super_concept = self.super_concept_detection(x, y)
+                if not most_likely_super_concept:
+                    continue
             else:
-                self.n_super_concept_sub_concept = n_super_concept_sub_concept_new
-                self.n_super_concept = n_super_concept_new
-                self.knowledge_base_size = knowledge_base_size_new
-            self.save_file(iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
+                most_likely_super_concept = x[0]
+            y = self.sub_concept_detection(most_likely_super_concept, y)
+            for sub_concept in y:
+                self.increase_count(n_super_concept_sub_concept_new,
+                                    (most_likely_super_concept.chunk, sub_concept))
+                self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
+                knowledge_base_size_new += 1
+            # print("most_likely_super_concept: ", most_likely_super_concept)
+            # print("detect y: ", y)
+            # print("old size: ", size_old)
+            # print("new size: ", size_new)
+            # print("=" * 30)
+            if time.time() - save_time > 2 * 60:
+                self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
+                save_time = time.time()
+        self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
+        sys.exit()
 
-        self.save_file("done")
+    def master(self, q_output: Queue):
+        iter_num = 0
+        self.load()
+        while 1:
+            iter_num += 1
+            for sent in tqdm(self.get_sentence(), desc="interator {}".format(iter_num)):
+                if not sent.strip():
+                    continue
+                q_output.put((iter_num, sent))
 
     def save_file(self, iter_num=None, n_super_concept=None, n_super_concept_sub_concept=None):
         """Saves probase as filename in text format"""
@@ -207,4 +218,14 @@ class Probase:
 import sys
 
 probase = Probase(sys.argv[1])
-probase.run()
+q_m2w = Queue(maxsize=3000)
+q_w2c = Queue(maxsize=3000)
+ps = []
+ps.append(Process(target=probase.master, args=(q_m2w,)))
+ps += [Process(target=probase.worker, args=(q_m2w, q_w2c)) for _ in range(probase.worker_num)]
+ps.append(Process(target=probase.caculate, args=(q_w2c,)))
+
+for p in ps:
+    p.start()
+for p in ps:
+    p.join()
