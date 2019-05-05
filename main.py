@@ -85,11 +85,11 @@ class Probase:
                 self.n_super_concept_sub_concept = n_super_concept_sub_concept_new
                 self.n_super_concept = n_super_concept_new
                 self.knowledge_base_size = knowledge_base_size_new
-            self.save_file(n_super_concept_new, n_super_concept_sub_concept_new)
+            self.save_file(iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
 
-        self.save_file()
+        self.save_file("done")
 
-    def save_file(self, n_super_concept=None, n_super_concept_sub_concept=None):
+    def save_file(self, iter_num=None, n_super_concept=None, n_super_concept_sub_concept=None):
         """Saves probase as filename in text format"""
         if not n_super_concept:
             n_super_concept = self.n_super_concept
@@ -97,9 +97,11 @@ class Probase:
             n_super_concept_sub_concept = self.n_super_concept_sub_concept
 
         filename = os.path.join(self.save_dir, self.output_name)
+        if iter_num:
+            filename += "_iter_{}".format(iter_num)
         with open(filename, 'w') as file:
             for key, value in n_super_concept_sub_concept.items():
-                file.write(key[0] + '\t' + key[1] + '\t' + str(value) + '\n')
+                file.write(key[0] + '##' + key[1] + '##' + str(value) + '\n')
         with open(os.path.join(self.save_dir, self.break_point_name), 'wb') as f:
             pickle.dump((n_super_concept, n_super_concept_sub_concept), f)
 
