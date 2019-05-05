@@ -1,4 +1,7 @@
 # -*- encoding: utf-8 -*-
+import os
+import pickle
+import time
 
 import spacy
 from nltk.tokenize import sent_tokenize
@@ -24,10 +27,15 @@ class Probase:
         self.threshold_super_concept = 1.2
         self.threshold_k = 0.02
         self.hp = HearstPatterns(extended=True)
+        self.save_dir = 'data'
+        self.break_point_name = 'save_point.pkl'
+        self.output_name = 'output.txt'
 
     def run(self):
         """主程序"""
+        self.load()
         iter_num = 0
+        save_time = time.time()
         while 1:
             iter_num += 1
             print()
@@ -36,11 +44,14 @@ class Probase:
             n_super_concept_new = {}
             knowledge_base_size_new = 1
             for sent in tqdm(self.get_sentence()):
+                if not sent.strip():
+                    continue
                 x, y = self.syntactic_extraction(sent)
-                print(x)
-                print(y)
                 if not x:
                     continue
+                print("=" * 30)
+                print('x: ', x)
+                print('y: ', y)
                 if len(x) > 1:
                     most_likely_super_concept = self.super_concept_detection(x, y)
                     if not most_likely_super_concept:
@@ -48,13 +59,21 @@ class Probase:
                 else:
                     most_likely_super_concept = x[0]
                 y = self.sub_concept_detection(most_likely_super_concept, y)
-                print("most_likely_super_concept: ", most_likely_super_concept)
-                print("detect y: ", y)
                 for sub_concept in y:
                     self.increase_count(n_super_concept_sub_concept_new,
                                         (most_likely_super_concept.chunk, sub_concept))
                     self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
                     knowledge_base_size_new += 1
+                size_old = len(self.n_super_concept_sub_concept)
+                size_new = len(n_super_concept_sub_concept_new)
+                print("most_likely_super_concept: ", most_likely_super_concept)
+                print("detect y: ", y)
+                print("old size: ", size_old)
+                print("new size: ", size_new)
+                print("=" * 30)
+                if time.time() - save_time > 5 * 60:
+                    self.save_file(n_super_concept_new, n_super_concept_sub_concept_new)
+                    save_time = time.time()
 
             size_old = len(self.n_super_concept_sub_concept)
             size_new = len(n_super_concept_sub_concept_new)
@@ -66,17 +85,23 @@ class Probase:
                 self.n_super_concept_sub_concept = n_super_concept_sub_concept_new
                 self.n_super_concept = n_super_concept_new
                 self.knowledge_base_size = knowledge_base_size_new
+            self.save_file(n_super_concept_new, n_super_concept_sub_concept_new)
 
-            if iter_num % 10 == 0:
-                self.save_file('data/output.txt')
+        self.save_file()
 
-        self.save_file('data/output.txt')
-
-    def save_file(self, filename):
+    def save_file(self, n_super_concept=None, n_super_concept_sub_concept=None):
         """Saves probase as filename in text format"""
+        if not n_super_concept:
+            n_super_concept = self.n_super_concept
+        if not n_super_concept_sub_concept:
+            n_super_concept_sub_concept = self.n_super_concept_sub_concept
+
+        filename = os.path.join(self.save_dir, self.output_name)
         with open(filename, 'w') as file:
-            for key, value in self.n_super_concept_sub_concept.items():
+            for key, value in n_super_concept_sub_concept.items():
                 file.write(key[0] + '\t' + key[1] + '\t' + str(value) + '\n')
+        with open(os.path.join(self.save_dir, self.break_point_name), 'wb') as f:
+            pickle.dump((n_super_concept, n_super_concept_sub_concept), f)
 
     @staticmethod
     def increase_count(dictionary, key):
@@ -169,6 +194,19 @@ class Probase:
             y.append(k)
         return list(x), y
 
+    def load(self):
+        save_point_path = os.path.join(self.save_dir, self.break_point_name)
+        if os.path.exists(save_point_path):
+            print('loading break point ...')
+            with open(save_point_path, 'rb') as f:
+                self.n_super_concept, self.n_super_concept_sub_concept = pickle.load(f)
 
-probase = Probase('data/input.txt')
+
+import sys
+
+probase = Probase(sys.argv[1])
 probase.run()
+
+
+x:  [<[text]: a politicized initiative [root]: initiative>]
+y:  ['the YIISA']

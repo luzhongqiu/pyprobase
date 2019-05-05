@@ -1,7 +1,8 @@
 import re
-from chunk import Chunk
 
 import spacy
+
+from chunk import Chunk
 
 
 class HearstPatterns(object):
@@ -73,7 +74,7 @@ class HearstPatterns(object):
         self.__spacy_nlp = spacy.load('en')
 
     def chunk(self, rawtext):
-        doc = self.__spacy_nlp(rawtext)
+        doc = self.__spacy_nlp(rawtext, disable=['ner', 'textcat'])
         chunks = []
         chunks_index = {}
         for sentence in doc.sents:
@@ -86,9 +87,13 @@ class HearstPatterns(object):
                         continue
                     chunk_arr.append(token.lemma_)
                 chunk_lemma = " ".join(chunk_arr)
+                if not chunk_arr:
+                    continue
+                if not chunk_lemma.strip():
+                    continue
                 replacement_value = "NP_" + "_".join(chunk_arr)
                 chunks_index[replacement_value] = Chunk(chunk=chunk_lemma, chunk_root=chunk.root.lemma_)
-                sentence_text = sentence_text.replace(chunk_lemma, replacement_value)
+                sentence_text = sentence_text.replace(chunk_lemma, replacement_value, 1)
             chunks.append(sentence_text)
         return chunks, chunks_index
 
@@ -106,8 +111,6 @@ class HearstPatterns(object):
         for sentence in np_tagged_sentences:
             # two or more NPs next to each other should be merged into a single NP, it's a chunk error
             for (hearst_pattern, parser) in self.__hearst_patterns:
-                print('hearst_pattern: ', hearst_pattern)
-                print('sentence: ', sentence)
                 matches = hearst_pattern.search(sentence)
                 if matches:
                     match_str = matches.group(0)
