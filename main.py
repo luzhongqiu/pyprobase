@@ -149,10 +149,7 @@ class Calculate:
     @staticmethod
     def increase_count(dictionary, key):
         """Increases count of key in dictionary"""
-        if key in dictionary:
-            dictionary[key] += 1
-        else:
-            dictionary[key] = 1
+        dictionary[key] = dictionary.get(key, 0) + 1
 
     def save_file(self, iter_num=None, n_super_concept=None, n_super_concept_sub_concept=None):
         """Saves probase as filename in text format"""
