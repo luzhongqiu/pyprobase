@@ -46,9 +46,9 @@ class Worker:
     def __init__(self, q_input, q_output):
         self.q_input = q_input
         self.q_output = q_output
-        self.hp = HearstPatterns(extended=True)
 
     def __call__(self, *args, **kwargs):
+        self.hp = HearstPatterns(extended=True)
         while 1:
             iter_num, sent = self.q_input.get()
             x, y = self.syntactic_extraction(sent)
@@ -76,7 +76,6 @@ class Calculate:
         self.save_dir = 'data'
         self.break_point_name = 'save_point.pkl'
         self.output_name = 'output.txt'
-        self.load()
 
     def load(self):
         save_point_path = os.path.join(self.save_dir, self.break_point_name)
@@ -172,6 +171,7 @@ class Calculate:
             pickle.dump((n_super_concept, n_super_concept_sub_concept), f)
 
     def __call__(self, *args, **kwargs):
+        self.load()
         origin_iter_num = 1
         n_super_concept_sub_concept_new = {}
         n_super_concept_new = {}
