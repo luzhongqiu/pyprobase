@@ -16,6 +16,12 @@ class Extractor:
         self.noun_chunk_pattern = r'<[A-Z]*>(<HYPH><[A-Z]*>)+|(<JJ>|<VBG>|<VBN>)*(<NN[A-Z]*>)+'
         self.lemmatizer = WordNetLemmatizer()
         self.__spacy_nlp = spacy.load('en', disable=['parser', 'ner', 'textcat'])
+        self.__adj_stopwords = {'able', 'available', 'brief', 'certain', 'different', 'due', 'enough', 'especially',
+                                'few', 'fifth', 'former', 'his', 'howbeit', 'immediate', 'important', 'inc', 'its',
+                                'last', 'latter', 'least', 'less', 'likely', 'little', 'many', 'ml', 'more', 'most',
+                                'much', 'my', 'necessary', 'new', 'next', 'non', 'old', 'other', 'our', 'ours', 'own',
+                                'particular', 'past', 'possible', 'present', 'proud', 'recent', 'same', 'several',
+                                'significant', 'similar', 'such', 'sup', 'sure'}
 
     def chunk(self, one_doc):
         text = one_doc.replace("\n", " ")
@@ -28,6 +34,7 @@ class Extractor:
         current_index = 0
         for start, end in terms_index:
             _noun_list = str(doc[start: end]).split(" ")
+            _noun_list = list(filter(lambda x: x not in self.__adj_stopwords, _noun_list))
             _noun_list = [self.lemmatizer.lemmatize(str(word)) for word in _noun_list]
             _noun = "_".join(_noun_list)
             # 再清洗

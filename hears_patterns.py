@@ -5,13 +5,6 @@ from noun_chunk_extractor import Extractor
 
 class HearstPatterns(object):
     def __init__(self, extended=False):
-        self.__adj_stopwords = ['able', 'available', 'brief', 'certain', 'different', 'due', 'enough', 'especially',
-                                'few', 'fifth', 'former', 'his', 'howbeit', 'immediate', 'important', 'inc', 'its',
-                                'last', 'latter', 'least', 'less', 'likely', 'little', 'many', 'ml', 'more', 'most',
-                                'much', 'my', 'necessary', 'new', 'next', 'non', 'old', 'other', 'our', 'ours', 'own',
-                                'particular', 'past', 'possible', 'present', 'proud', 'recent', 'same', 'several',
-                                'significant', 'similar', 'such', 'sup', 'sure']
-
 
         self.__hearst_patterns = [
             ('(NP_\\w+ (, )?such as (NP_\\w+ ? (, )?(and |or )?)+)', 'first'),
