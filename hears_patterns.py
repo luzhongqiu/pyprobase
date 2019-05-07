@@ -127,7 +127,7 @@ class HearstPatterns(object):
 
     def clean_hyponym_term(self, term):
         # good point to do the stemming or lemmatization
-        return term.replace("NP_", "").replace("_", " ").lower()
+        return term.replace("NP_", "").lower()
 
 
 if __name__ == '__main__':
