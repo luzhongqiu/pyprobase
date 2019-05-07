@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+import json
 import os
 import pickle
 import time
@@ -20,15 +21,30 @@ class Master:
     def __init__(self, q_output, corpus_path):
         self.q_output = q_output
         self.corpus_path = corpus_path
+        self.point = {}
+        self.save_line = 100000
+        self.save_dir = 'data'
+        self.break_point_name = "master_point.json"
 
     def __call__(self, *args, **kwargs):
+        self.load_point()
         iter_num = 0
+        skip_num = self.point.get(self.corpus_path, 0)
+        print("{} skip {}".format(self.corpus_path, skip_num))
+        is_first_skip = True # 为了第二次迭代从头开始
         while 1:
             iter_num += 1
-            for sent in tqdm(self.get_sentence(), desc="interator {}".format(iter_num)):
+            c_counter = tqdm(desc="interator {}".format(iter_num))
+            for sent in self.get_sentence():
+                c_counter.update()
                 if not sent.strip():
                     continue
+                if is_first_skip and c_counter.n < skip_num:
+                    continue
+                is_first_skip = False
                 self.q_output.put((iter_num, sent))
+                if c_counter.n % self.save_line == 0:
+                    self.save_point(c_counter.n)
 
     def get_sentence(self) -> list:
         """分句子"""
@@ -40,6 +56,18 @@ class Master:
                         continue
                     for sent in sent_tokenize(d):
                         yield sent
+
+    def save_point(self, number):
+        self.point[self.corpus_path] = number
+        with open(os.path.join(self.save_dir, self.break_point_name)) as f:
+            json.dump(self.point, f)
+
+    def load_point(self):
+        file_path = os.path.join(self.save_dir, self.break_point_name)
+        if not os.path.exists(file_path):
+            return
+        with open(file_path) as f:
+            self.point = json.load(f)
 
 
 class Worker:
