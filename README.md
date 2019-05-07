@@ -43,6 +43,6 @@ nltk.download('wordnet')
 
 ---
 todo
-- [] local merge
-- [] Horizontal merge
-- [] hierarchy merge
+- [ ] local merge
+- [ ] Horizontal merge
+- [ ] hierarchy merge
