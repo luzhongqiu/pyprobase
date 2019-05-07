@@ -59,14 +59,14 @@ class Master:
 
     def save_point(self, number):
         self.point[self.corpus_path] = number
-        with open(os.path.join(self.save_dir, self.break_point_name)) as f:
+        with open(os.path.join(self.save_dir, self.break_point_name), 'w') as f:
             json.dump(self.point, f)
 
     def load_point(self):
         file_path = os.path.join(self.save_dir, self.break_point_name)
         if not os.path.exists(file_path):
             return
-        with open(file_path, 'w') as f:
+        with open(file_path) as f:
             self.point = json.load(f)
 
 
