@@ -102,13 +102,13 @@ class Calculate:
         self.threshold_super_concept = 1.2
         self.threshold_k = 0.02
         self.save_dir = 'data'
-        self.break_point_name = 'save_point.pkl'
+        self.break_point_name = 'calculate_point.pkl'
         self.output_name = 'output.txt'
 
     def load(self):
         save_point_path = os.path.join(self.save_dir, self.break_point_name)
         if os.path.exists(save_point_path):
-            print('loading break point ...')
+            print('loading calculate point ...')
             with open(save_point_path, 'rb') as f:
                 self.n_super_concept, self.n_super_concept_sub_concept = pickle.load(f)
 
