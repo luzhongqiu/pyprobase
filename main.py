@@ -110,7 +110,9 @@ class Calculate:
         if os.path.exists(save_point_path):
             print('loading calculate point ...')
             with open(save_point_path, 'rb') as f:
-                self.n_super_concept, self.n_super_concept_sub_concept = pickle.load(f)
+                n_super_concept, n_super_concept_sub_concept, knowledge_base_size = pickle.load(f)
+            return n_super_concept, n_super_concept_sub_concept, knowledge_base_size
+        return {}, {}, 1
 
     def p_x(self, super_concept):
         """计算P(x)"""
@@ -179,7 +181,7 @@ class Calculate:
         """Increases count of key in dictionary"""
         dictionary[key] = dictionary.get(key, 0) + 1
 
-    def save_file(self, iter_num=None, n_super_concept=None, n_super_concept_sub_concept=None):
+    def save_file(self, iter_num=None, n_super_concept=None, n_super_concept_sub_concept=None, knowledge_base_size=1):
         """Saves probase as filename in text format"""
         if not n_super_concept:
             n_super_concept = self.n_super_concept
@@ -193,14 +195,11 @@ class Calculate:
             for key, value in n_super_concept_sub_concept.items():
                 file.write(key[0] + '##' + key[1] + '##' + str(value) + '\n')
         with open(os.path.join(self.save_dir, self.break_point_name), 'wb') as f:
-            pickle.dump((n_super_concept, n_super_concept_sub_concept), f)
+            pickle.dump((n_super_concept, n_super_concept_sub_concept, knowledge_base_size), f)
 
     def __call__(self, *args, **kwargs):
-        self.load()
+        n_super_concept_new, n_super_concept_sub_concept_new, knowledge_base_size_new = self.load()
         origin_iter_num = 1
-        n_super_concept_sub_concept_new = {}
-        n_super_concept_new = {}
-        knowledge_base_size_new = 1
         save_time = time.time()
         while 1:
             iter_num, x, y = self.q_input.get()
@@ -234,9 +233,9 @@ class Calculate:
                 self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
                 knowledge_base_size_new += 1
             if time.time() - save_time > 2 * 60:
-                self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
+                self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new, knowledge_base_size_new)
                 save_time = time.time()
-        self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new)
+        self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new, knowledge_base_size_new)
         sys.exit()
 
 
