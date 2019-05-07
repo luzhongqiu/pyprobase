@@ -1,8 +1,6 @@
 import re
 
-import spacy
-
-from chunk import Chunk
+from noun_chunk_extractor import Extractor
 
 
 class HearstPatterns(object):
@@ -14,10 +12,7 @@ class HearstPatterns(object):
                                 'particular', 'past', 'possible', 'present', 'proud', 'recent', 'same', 'several',
                                 'significant', 'similar', 'such', 'sup', 'sure']
 
-        # now define the Hearst patterns
-        # format is <hearst-pattern>, <general-term>
-        # so, what this means is that if you apply the first pattern, the firsr Noun Phrase (NP)
-        # is the general one, and the rest are specific NPs
+
         self.__hearst_patterns = [
             ('(NP_\\w+ (, )?such as (NP_\\w+ ? (, )?(and |or )?)+)', 'first'),
             ('(such NP_\\w+ (, )?as (NP_\\w+ ?(, )?(and |or )?)+)', 'first'),
@@ -71,31 +66,31 @@ class HearstPatterns(object):
             ])
 
         self.__hearst_patterns = [(re.compile(k), v) for k, v in self.__hearst_patterns]
-        self.__spacy_nlp = spacy.load('en', disable=['ner', 'textcat'])
+        self.noun_chunk_extractor = Extractor()
 
-    def chunk(self, rawtext):
-        doc = self.__spacy_nlp(rawtext)
-        chunks = []
-        chunks_index = {}
-        for sentence in doc.sents:
-            sentence_text = sentence.lemma_
-            for chunk in sentence.noun_chunks:
-                chunk_arr = []
-                for token in chunk:
-                    # Ignore Punctuation and stopword adjectives (generally quantifiers of plurals)
-                    if token.is_punct or token.lemma_ in self.__adj_stopwords:
-                        continue
-                    chunk_arr.append(token.lemma_)
-                chunk_lemma = " ".join(chunk_arr)
-                if not chunk_arr:
-                    continue
-                if not chunk_lemma.strip():
-                    continue
-                replacement_value = "NP_" + "_".join(chunk_arr)
-                chunks_index[replacement_value] = Chunk(chunk=chunk_lemma.lower(), chunk_root=chunk.root.lemma_.lower())
-                sentence_text = sentence_text.replace(chunk_lemma, replacement_value, 1)
-            chunks.append(sentence_text)
-        return chunks, chunks_index
+    # def chunk(self, rawtext):
+    #     doc = self.__spacy_nlp(rawtext)
+    #     chunks = []
+    #     chunks_index = {}
+    #     for sentence in doc.sents:
+    #         sentence_text = sentence.lemma_
+    #         for chunk in sentence.noun_chunks:
+    #             chunk_arr = []
+    #             for token in chunk:
+    #                 # Ignore Punctuation and stopword adjectives (generally quantifiers of plurals)
+    #                 if token.is_punct or token.lemma_ in self.__adj_stopwords:
+    #                     continue
+    #                 chunk_arr.append(token.lemma_)
+    #             chunk_lemma = " ".join(chunk_arr)
+    #             if not chunk_arr:
+    #                 continue
+    #             if not chunk_lemma.strip():
+    #                 continue
+    #             replacement_value = "NP_" + "_".join(chunk_arr)
+    #             chunks_index[replacement_value] = Chunk(chunk=chunk_lemma.lower(), chunk_root=chunk.root.lemma_.lower())
+    #             sentence_text = sentence_text.replace(chunk_lemma, replacement_value, 1)
+    #         chunks.append(sentence_text)
+    #     return chunks, chunks_index
 
     """
         This is the main entry point for this code.
@@ -107,7 +102,8 @@ class HearstPatterns(object):
     def find_hyponyms(self, rawtext):
 
         hyponyms = []
-        np_tagged_sentences, chunks_index = self.chunk(rawtext)
+        np_tagged_sentences, chunks_index = self.noun_chunk_extractor.chunk(rawtext)
+        # np_tagged_sentences, chunks_index = self.chunk(rawtext)
         for sentence in np_tagged_sentences:
             # two or more NPs next to each other should be merged into a single NP, it's a chunk error
             for (hearst_pattern, parser) in self.__hearst_patterns:
@@ -132,3 +128,8 @@ class HearstPatterns(object):
     def clean_hyponym_term(self, term):
         # good point to do the stemming or lemmatization
         return term.replace("NP_", "").replace("_", " ").lower()
+
+
+if __name__ == '__main__':
+    h = HearstPatterns(extended=True)
+    print(h.find_hyponyms("There are some animals such as dogs and cats"))
