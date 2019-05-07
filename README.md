@@ -40,3 +40,9 @@ python -m spacy download en
 import nltk
 nltk.download('wordnet')
 ```
+
+---
+todo
+- [] local merge
+- [] Horizontal merge
+- [] hierarchy merge
