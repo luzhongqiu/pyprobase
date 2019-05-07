@@ -21,7 +21,7 @@ class Extractor:
                                 'last', 'latter', 'least', 'less', 'likely', 'little', 'many', 'ml', 'more', 'most',
                                 'much', 'my', 'necessary', 'new', 'next', 'non', 'old', 'other', 'our', 'ours', 'own',
                                 'particular', 'past', 'possible', 'present', 'proud', 'recent', 'same', 'several',
-                                'significant', 'similar', 'such', 'sup', 'sure', 'none', 'a', 'an'}
+                                'significant', 'similar', 'such', 'sup', 'sure', 'none', 'a', 'an', 'part'}
 
     def chunk(self, one_doc):
         text = one_doc.replace("\n", " ")
