@@ -29,13 +29,13 @@ class Extractor:
         for start, end in terms_index:
             _noun_list = str(doc[start: end]).split(" ")
             _noun_list = [self.lemmatizer.lemmatize(str(word)) for word in _noun_list]
-            _noun = "NP_" + "_".join(_noun_list)
+            _noun = "_".join(_noun_list)
             # 再清洗
             if len(_noun_list) > 1:
                 _noun = self.clean_again(_noun)  # fixme
                 if _noun is None:
                     continue
-
+            _noun = "NP_" + _noun
             noun_chunk.append(_noun)
             # word_rest 不做 lemmatize
             word_rest = [_ for _ in str(doc[current_index: start]).split(" ")]
