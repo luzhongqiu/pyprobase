@@ -66,7 +66,7 @@ class Master:
         file_path = os.path.join(self.save_dir, self.break_point_name)
         if not os.path.exists(file_path):
             return
-        with open(file_path) as f:
+        with open(file_path, 'w') as f:
             self.point = json.load(f)
 
 
