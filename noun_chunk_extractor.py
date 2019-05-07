@@ -47,7 +47,7 @@ class Extractor:
         content = [_ for _ in content if _.strip()]
 
         # 包装输出
-        chunk_index = {k: Chunk(chunk=k.strip('NP_'), chunk_root=k.strip('NP_').split('_')[-1]) for k in noun_chunk}
+        chunk_index = {k: Chunk(chunk=k.strip('NP_').lower(), chunk_root=k.strip('NP_').split('_')[-1].lower()) for k in noun_chunk}
         sentence = " ".join(content)
         return [sentence], chunk_index
 
