@@ -31,7 +31,7 @@ class Master:
         iter_num = 0
         skip_num = self.point.get(self.corpus_path, 0)
         print("{} skip {}".format(self.corpus_path, skip_num))
-        is_first_skip = True # 为了第二次迭代从头开始
+        is_first_skip = True  # 为了第二次迭代从头开始
         while 1:
             iter_num += 1
             c_counter = tqdm(desc="interator {}".format(iter_num))
@@ -219,6 +219,7 @@ class Calculate:
                     n_super_concept_sub_concept_new = {}
                     n_super_concept_new = {}
                     knowledge_base_size_new = 1
+                origin_iter_num = iter_num
 
             if len(x) > 1:
                 most_likely_super_concept = self.super_concept_detection(x, y)
@@ -233,7 +234,8 @@ class Calculate:
                 self.increase_count(n_super_concept_new, most_likely_super_concept.chunk)
                 knowledge_base_size_new += 1
             if time.time() - save_time > 2 * 60:
-                self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new, knowledge_base_size_new)
+                self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new,
+                               knowledge_base_size_new)
                 save_time = time.time()
         self.save_file(origin_iter_num, n_super_concept_new, n_super_concept_sub_concept_new, knowledge_base_size_new)
         sys.exit()

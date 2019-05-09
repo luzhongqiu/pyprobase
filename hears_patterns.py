@@ -125,4 +125,4 @@ class HearstPatterns(object):
 
 if __name__ == '__main__':
     h = HearstPatterns(extended=True)
-    print(h.find_hyponyms("There are some animals such as dogs and cats"))
+    print(h.find_hyponyms("There are some beautiful  animals such as dogs and cats"))
